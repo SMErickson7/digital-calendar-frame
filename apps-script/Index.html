@@ -1,0 +1,670 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Space+Grotesk:wght@500;600&display=swap">
+<style>
+  :root {
+    --bg: #ECEEF1; --card: #FFFFFF; --ink: #1A1D22; --muted: #5B6470; --soft: #3B424C;
+    --line: #E3E6EA; --accent: #2F5BD3; --accent-soft: #EEF2FD; --today: #F5F7FE; --now: #C2410C;
+    --hol-bg: #FDEBD8; --hol-ink: #9A3412;
+    --muted2: #4A525D; --divider: #C9CED6; --line2: #DDE1E6; --faint: #8A929D; --ticker: #1A1D22;
+  }
+  body.dark {
+    --bg: #111317; --card: #1B1F25; --ink: #EEF0F3; --muted: #9AA3AE; --soft: #C3C9D1;
+    --line: #2A3038; --accent: #3D63D6; --accent-soft: #1E2A45; --today: #1F2533; --now: #F07A3F;
+    --hol-bg: #3A2516; --hol-ink: #F5B07A;
+    --muted2: #A9B1BC; --divider: #3A414B; --line2: #343B45; --faint: #6F7883; --ticker: #08090B;
+  }
+  body, #stage, .week, aside, header, .col, .dayhead { transition: background-color 1.5s, color 1.5s; }
+  body.dark .pin { color: #AFC3FF; }
+  html, body { margin: 0; height: 100%; background: var(--bg); overflow: hidden; }
+  body { font-family: 'Inter', system-ui, sans-serif; color: var(--ink); }
+  #stage { width: 1920px; height: 1080px; box-sizing: border-box; padding: 32px 40px; display: flex; flex-direction: column; gap: 20px; transform-origin: 0 0; position: absolute; left: 0; top: 0; }
+  .num { font-family: 'Space Grotesk', 'Inter', sans-serif; }
+  .ell { white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+
+  /* header */
+  header { height: 120px; display: flex; align-items: center; justify-content: space-between; gap: 32px; }
+  .left { display: flex; align-items: center; gap: 36px; flex-shrink: 0; }
+  .time { font-size: 92px; font-weight: 600; line-height: 1; letter-spacing: -3px; }
+  .date { display: flex; flex-direction: column; gap: 4px; }
+  .date .wd { font-size: 28px; font-weight: 600; }
+  .date .md { font-size: 22px; color: var(--soft); }
+  .divider { width: 1px; height: 64px; background: var(--divider); }
+  .wx { display: flex; align-items: center; gap: 16px; }
+  .wx .t { font-size: 40px; font-weight: 600; line-height: 1; }
+  .wx .c { font-size: 17px; color: var(--muted2); }
+  .nextup { min-width: 0; max-width: 780px; flex: 0 1 780px; box-sizing: border-box; height: 120px; background: var(--accent); color: #fff; border-radius: 18px; padding: 14px 26px; display: flex; flex-direction: column; justify-content: center; gap: 4px; }
+  .nextup .k { font-size: 15px; font-weight: 700; letter-spacing: 2px; opacity: 0.85; }
+  .nextup .ti { font-size: 36px; font-weight: 700; line-height: 1.1; }
+  .nextup .wh { font-size: 22px; font-weight: 500; opacity: 0.92; }
+  .nextup.none { background: var(--card); color: var(--soft); }
+
+  /* grid */
+  main { display: flex; gap: 28px; flex: 1; min-height: 0; }
+  .week { flex: 2 1 0; min-width: 0; background: var(--card); border-radius: 20px; padding: 16px 20px 18px 8px; display: flex; flex-direction: column; }
+  .cols { display: grid; grid-template-columns: 64px repeat(4, minmax(0, 1fr)); }
+  .dayhead { height: 76px; padding: 0 14px; display: flex; flex-direction: column; justify-content: center; gap: 2px; }
+  .dayhead.today { background: var(--today); border-radius: 12px 12px 0 0; }
+  .dayhead .lbl { font-size: 13px; font-weight: 600; letter-spacing: 1.5px; color: var(--muted); }
+  .dayhead.today .lbl { color: var(--accent); }
+  .dayhead .row1 { display: flex; align-items: baseline; justify-content: space-between; gap: 8px; }
+  .dayhead .d { font-size: 28px; font-weight: 600; }
+  .dayhead .hl { font-size: 16px; color: var(--muted2); white-space: nowrap; display: flex; align-items: center; gap: 6px; }
+  .dayhead .hl .lo { opacity: 0.75; }
+  .dayhead .row1 { align-items: center; }
+  .alldayrow { border-top: 1px solid var(--line2); }
+  .allday { padding: 4px 6px; display: flex; flex-direction: column; gap: 3px; }
+  .allday .ev { background: var(--accent); color: #fff; border-radius: 6px; padding: 3px 9px; font-size: 14px; font-weight: 600; }
+  .gridbody { border-top: 1px solid var(--line2); }
+  .gutter { position: relative; font-size: 14px; color: var(--muted); }
+  .gutter span { position: absolute; right: 10px; transform: translateY(-50%); }
+  .gutter span.first { transform: none; top: 2px !important; }
+  .gutter span.last { transform: translateY(-100%); }
+  .col { position: relative; border-left: 1px solid var(--line); }
+  .col.today { background-color: var(--today); }
+  .hline { position: absolute; left: 0; right: 0; height: 1px; background: var(--line); }
+  .block { position: absolute; box-sizing: border-box; background: var(--accent); color: #fff; border-radius: 10px; padding: 8px 12px; overflow: hidden; display: flex; flex-direction: column; gap: 3px; border: 1px solid var(--card); }
+  .block .m { font-size: 14px; opacity: 0.9; }
+  .block .t { font-size: 20px; font-weight: 600; line-height: 1.25; }
+  .block.mid { justify-content: center; padding: 4px 12px; gap: 1px; }
+  .block.mid .t { font-size: 18px; }
+  .block.short { flex-direction: row; align-items: center; gap: 8px; padding: 2px 10px; }
+  .block.short .m { font-size: 14px; font-weight: 700; opacity: 1; flex-shrink: 0; }
+  .block.short .t { font-size: 15px; }
+  .block .cont { margin-top: auto; font-size: 13px; opacity: 0.85; }
+  .block.past { opacity: 0.45; }
+  .pin { position: absolute; left: 6px; right: 6px; box-sizing: border-box; font-size: 14px; font-weight: 600; color: var(--accent); background: var(--accent-soft); border: 1px dashed var(--accent); border-radius: 8px; padding: 5px 9px; line-height: 1.4; z-index: 4; }
+  .pin.past { color: var(--muted); background: var(--card); border-color: var(--line2); font-weight: 500; }
+  .free { position: absolute; left: 0; right: 0; text-align: center; font-size: 17px; color: var(--faint); }
+  .nowline { position: absolute; left: 0; right: 0; height: 2px; background: var(--now); z-index: 3; }
+  .nowline::before { content: ''; position: absolute; left: -5px; top: -4px; width: 10px; height: 10px; border-radius: 50%; background: var(--now); }
+
+  /* games panel */
+  aside { flex: 1 1 0; min-width: 0; background: var(--card); border-radius: 20px; padding: 20px 22px; display: flex; flex-direction: column; gap: 12px; overflow: hidden; }
+  aside h2 { margin: 0; font-family: 'Space Grotesk', sans-serif; font-size: 26px; font-weight: 600; }
+  .sday { display: flex; flex-direction: column; gap: 8px; }
+  .sday .h { font-size: 13px; font-weight: 600; letter-spacing: 1.2px; color: var(--muted); padding-bottom: 3px; border-bottom: 1px solid var(--line); }
+  .game { height: 62px; box-sizing: border-box; border-radius: 12px; padding: 0 16px 0 9px; display: flex; align-items: center; gap: 14px; flex-shrink: 0; }
+  .game.light { border: 1px solid #D5DAE0; }
+  .badge { width: 46px; height: 46px; flex-shrink: 0; box-sizing: border-box; border-radius: 50%; background: #fff; display: flex; align-items: center; justify-content: center; overflow: hidden; }
+  .badge img { width: 34px; height: 34px; object-fit: contain; }
+  .badge .code { font-size: 11px; font-weight: 700; color: #1A1D22; }
+  .game.light .badge { border: 1px solid #D5DAE0; }
+  .badge.bare, .game.light .badge.bare { background: transparent; border: none; }
+  .badge.bare img { width: 42px; height: 42px; }
+  .game .txt { flex: 1; min-width: 0; display: flex; flex-direction: column; gap: 2px; }
+  .game .ti { font-size: 18px; font-weight: 600; }
+  .game .sb { font-size: 13px; opacity: 0.85; }
+  .game .tm { font-size: 22px; font-weight: 600; }
+  .game .ha { font-size: 16px; font-weight: 700; opacity: 0.85; margin-right: -6px; }
+  .hrow { display: flex; align-items: center; gap: 10px; height: 30px; font-size: 16px; }
+  .hrow .tag { font-size: 11px; font-weight: 700; padding: 4px 8px; border-radius: 6px; background: var(--hol-bg); color: var(--hol-ink); }
+  .hrow .n { font-style: italic; }
+  .empty { font-size: 16px; color: var(--muted); }
+
+  /* ticker */
+  footer { height: 64px; box-sizing: border-box; background: var(--ticker); color: #F3F1EC; border-radius: 14px; padding: 0 14px; display: flex; align-items: center; gap: 30px; font-size: 18px; white-space: nowrap; overflow: hidden; flex-shrink: 0; }
+  footer .lbl { font-size: 15px; font-weight: 700; letter-spacing: 1.5px; padding: 0 6px 0 8px; color: #fff; }
+  footer .chip { display: flex; align-items: center; gap: 10px; padding: 6px 14px 6px 6px; border-radius: 10px; }
+  footer .chip .mini { width: 32px; height: 32px; border-radius: 50%; background: #fff; display: flex; align-items: center; justify-content: center; overflow: hidden; }
+  footer .chip .mini img { width: 24px; height: 24px; object-fit: contain; }
+  footer .chip .mini.bare { background: transparent; }
+  footer .chip .mini.bare img { width: 28px; height: 28px; }
+  footer .chip .mini b { font-size: 9px; color: #1A1D22; }
+  footer .chip.done { opacity: 0.6; }
+  footer .sep { color: #6B7380; }
+  footer .dim { color: #C9CED6; }
+  footer .dim b { color: #fff; }
+
+  .status { position: absolute; right: 48px; bottom: 112px; font-size: 13px; color: var(--hol-ink); background: var(--hol-bg); padding: 4px 10px; border-radius: 999px; display: none; z-index: 5; }
+  [data-ev] { cursor: pointer; }
+  #detail { position: fixed; top: 0; right: 0; bottom: 0; left: 0; background: rgba(10,12,16,0.55); display: none; align-items: center; justify-content: center; z-index: 8; }
+  #detail.on { display: flex; }
+  .dcard { width: 1100px; max-height: 860px; box-sizing: border-box; background: var(--card); color: var(--ink); border-radius: 24px; overflow: hidden; display: flex; flex-direction: column; box-shadow: 0 20px 60px rgba(0,0,0,0.35); }
+  .dhead { display: flex; align-items: flex-start; gap: 22px; padding: 30px 30px 26px 36px; }
+  .dhead .dbadge { width: 72px; height: 72px; flex-shrink: 0; border-radius: 50%; display: flex; align-items: center; justify-content: center; }
+  .dhead .dbadge img { width: 56px; height: 56px; object-fit: contain; }
+  .dhead .dtext { flex: 1; min-width: 0; display: flex; flex-direction: column; gap: 8px; }
+  .dhead .dkicker { font-size: 15px; font-weight: 700; letter-spacing: 2px; opacity: 0.85; }
+  .dhead h3 { margin: 0; font-size: 44px; font-weight: 700; line-height: 1.1; }
+  .dclose { width: 72px; height: 72px; flex-shrink: 0; border: none; border-radius: 50%; background: rgba(255,255,255,0.18); color: inherit; font-size: 40px; line-height: 1; cursor: pointer; }
+  .dbody { padding: 28px 36px 8px; display: flex; flex-direction: column; gap: 18px; overflow: hidden; }
+  .drow { display: flex; gap: 18px; align-items: baseline; font-size: 24px; }
+  .drow .dk { width: 130px; flex-shrink: 0; font-size: 14px; font-weight: 700; letter-spacing: 1.5px; color: var(--muted); }
+  .drow .dv { flex: 1; min-width: 0; line-height: 1.35; }
+  .ddesc { font-size: 20px; line-height: 1.5; white-space: pre-line; color: var(--soft); max-height: 300px; overflow-y: auto; overflow-wrap: anywhere; }
+  .dfoot { padding: 18px 36px 30px; display: flex; justify-content: flex-end; }
+  .dback { height: 64px; padding: 0 34px; border: none; border-radius: 999px; background: var(--ink); color: var(--card); font-size: 20px; font-weight: 700; cursor: pointer; }
+  #saver { position: fixed; top: 0; right: 0; bottom: 0; left: 0; background: #000; display: none; align-items: center; justify-content: center; z-index: 9; cursor: none; }
+  #saver.on { display: flex; }
+  #saver span { font-size: 22vw; font-weight: 500; letter-spacing: -0.02em; color: #4B5059; transition: transform 1s; }
+  #night { position: fixed; top: 0; right: 0; bottom: 0; left: 0; background: #000; opacity: 0; pointer-events: none; transition: opacity 2s; z-index: 10; }
+</style>
+</head>
+<body>
+<div id="stage">
+  <header>
+    <div class="left">
+      <span class="num time" id="time">--:--</span>
+      <div class="date"><span class="wd" id="wd"></span><span class="md" id="md"></span></div>
+      <div class="divider"></div>
+      <div class="wx" id="wx"></div>
+    </div>
+    <div class="nextup" id="next"></div>
+  </header>
+  <main>
+    <section class="week">
+      <div class="cols" id="heads"></div>
+      <div class="cols alldayrow" id="alldays"></div>
+      <div class="cols gridbody" id="grid"></div>
+    </section>
+    <aside>
+      <h2>Games and holidays</h2>
+      <div id="side" style="display:flex;flex-direction:column;gap:12px"></div>
+    </aside>
+  </main>
+  <footer id="ticker"><span class="lbl">TODAY'S GAMES</span><span class="dim">Loading...</span></footer>
+  <div class="status" id="status"></div>
+</div>
+<div id="detail" role="dialog" aria-modal="true" aria-labelledby="dtitle"><div class="dcard" id="dcard"></div></div>
+<div id="saver"><span class="num" id="stime"></span></div>
+<div id="night"></div>
+
+<script>
+var SETTINGS = {
+  days: 4,             // columns on the grid
+  hours: 6,            // hours shown, starting at the current hour
+  hourPx: 112,         // height of one hour on the grid
+  screensaverAfter: 120,   // seconds without a touch before the gray clock appears
+  screensaverFrom: '21:00',// the gray clock is allowed from 9:00 PM...
+  screensaverTo: '06:30',  // ...until 6:30 AM (set both to null to turn it off)
+  nightFrom: null,     // optional full blackout, e.g. '23:00' (the screensaver clock replaces this)
+  nightTo: null,       // e.g. '06:30'
+  nightOpacity: 1,     // 1 = fully black, 0.75 = heavily dimmed
+  tapWakeSeconds: 60,  // tapping the black screen shows the calendar for this long
+  darkAtSunset: true,  // switch to dark mode between sunset and sunrise
+  gameLengthHours: 2.5,// a game counts as finished this long after it starts (for fading only)
+  refreshMinutes: 5
+};
+
+var DATA = null, WEATHER = null, LOGOS = {};
+var TZ = 'America/New_York';
+
+/* ---------- time helpers (always in the calendar's time zone) ---------- */
+function parts(ms) {
+  var f = new Intl.DateTimeFormat('en-US', { timeZone: TZ, year: 'numeric', month: '2-digit', day: '2-digit', hour: '2-digit', minute: '2-digit', hour12: false, weekday: 'short' });
+  var o = {};
+  f.formatToParts(new Date(ms)).forEach(function (p) { o[p.type] = p.value; });
+  return { key: o.year + '-' + o.month + '-' + o.day, mo: +o.month, d: +o.day, h: parseInt(o.hour, 10) % 24, mi: +o.minute, wd: o.weekday };
+}
+function hhmm(ms) { var p = parts(ms); return pad(p.h) + ':' + pad(p.mi); }
+function pad(n) { return (n < 10 ? '0' : '') + n; }
+function esc(s) { return String(s == null ? '' : s).replace(/[&<>"]/g, function (c) { return { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c]; }); }
+var WD_LONG = { Sun: 'Sunday', Mon: 'Monday', Tue: 'Tuesday', Wed: 'Wednesday', Thu: 'Thursday', Fri: 'Friday', Sat: 'Saturday' };
+var MONTHS = ['January','February','March','April','May','June','July','August','September','October','November','December'];
+
+/** The start of the current hour, then the same clock hour on each following day. */
+function windows() {
+  var now = Date.now(), p = parts(now);
+  var hourStart = now - (p.mi * 60000) - (new Date(now).getSeconds() * 1000) - new Date(now).getMilliseconds();
+  var out = [];
+  for (var i = 0; i < SETTINGS.days; i++) {
+    var ws = hourStart + i * 86400000;
+    var q = parts(ws);
+    if (q.h !== p.h) ws += ((p.h - q.h + 36) % 24 - 12) * 3600000; // daylight saving shift
+    out.push({ start: ws, end: ws + SETTINGS.hours * 3600000, day: parts(ws) });
+  }
+  return out;
+}
+function dayKeyOffset(n) { var now = Date.now(); var p = parts(now); return parts(now + ((12 - p.h) * 60 - p.mi) * 60000 + n * 86400000).key; }
+
+/* ---------- weather ---------- */
+var WX = {
+  clear: '<circle cx="12" cy="12" r="4.2"></circle><path d="M12 2.5v2.2M12 19.3v2.2M2.5 12h2.2M19.3 12h2.2M5.3 5.3l1.6 1.6M17.1 17.1l1.6 1.6M5.3 18.7l1.6-1.6M17.1 6.9l1.6-1.6"></path>',
+  moon: '<path d="M20 14.5A8 8 0 1 1 9.5 4a6.5 6.5 0 0 0 10.5 10.5z"></path>',
+  partly: '<path d="M8.5 5.5a3.6 3.6 0 0 1 6.3 2.1"></path><path d="M8 19h9.5a3.5 3.5 0 0 0 .4-7A5.2 5.2 0 0 0 7.8 12.6 3.2 3.2 0 0 0 8 19z"></path>',
+  cloud: '<path d="M7 18h10a4 4 0 0 0 .5-7.97A6 6 0 0 0 6.1 11.5 3.5 3.5 0 0 0 7 18z"></path>',
+  fog: '<path d="M7 13h10a4 4 0 0 0 .5-7.97A6 6 0 0 0 6.1 6.5 3.5 3.5 0 0 0 7 13z"></path><path d="M4 17h16M6 20.5h12"></path>',
+  rain: '<path d="M7 14h10a4 4 0 0 0 .5-7.97A6 6 0 0 0 6.1 7.5 3.5 3.5 0 0 0 7 14z"></path><path d="M8 17.5l-1 2.5M12 17.5l-1 2.5M16 17.5l-1 2.5"></path>',
+  snow: '<path d="M7 14h10a4 4 0 0 0 .5-7.97A6 6 0 0 0 6.1 7.5 3.5 3.5 0 0 0 7 14z"></path><path d="M8 18v.01M12 19.5v.01M16 18v.01M10 21.5v.01M14 21.5v.01"></path>',
+  storm: '<path d="M7 14h10a4 4 0 0 0 .5-7.97A6 6 0 0 0 6.1 7.5 3.5 3.5 0 0 0 7 14z"></path><path d="M12.5 15.5l-2 3h3l-2 3"></path>'
+};
+function wxInfo(code, isDay) {
+  if (code === 0) return { label: 'Clear', icon: isDay === false ? 'moon' : 'clear' };
+  if (code === 1) return { label: 'Mostly clear', icon: isDay === false ? 'moon' : 'partly' };
+  if (code === 2) return { label: 'Partly cloudy', icon: 'partly' };
+  if (code === 3) return { label: 'Cloudy', icon: 'cloud' };
+  if (code === 45 || code === 48) return { label: 'Fog', icon: 'fog' };
+  if (code >= 51 && code <= 57) return { label: 'Drizzle', icon: 'rain' };
+  if ((code >= 61 && code <= 67) || (code >= 80 && code <= 82)) return { label: 'Rain', icon: 'rain' };
+  if ((code >= 71 && code <= 77) || code === 85 || code === 86) return { label: 'Snow', icon: 'snow' };
+  if (code >= 95) return { label: 'Thunderstorms', icon: 'storm' };
+  return { label: '', icon: 'cloud' };
+}
+function wxIcon(code, isDay, size) {
+  var i = wxInfo(code, isDay);
+  return '<svg width="' + size + '" height="' + size + '" viewBox="0 0 24 24" fill="none" stroke="currentColor" style="color:var(--soft);flex-shrink:0" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" role="img" aria-label="' + i.label + '">' + WX[i.icon] + '</svg>';
+}
+function renderWeather() {
+  var el = document.getElementById('wx');
+  if (!WEATHER) { el.innerHTML = ''; return; }
+  var i = wxInfo(WEATHER.code, WEATHER.isDay), today = WEATHER.days[parts(Date.now()).key];
+  el.innerHTML = '<svg width="56" height="56" viewBox="0 0 24 24" fill="none" stroke="currentColor" style="color:var(--soft)" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" role="img" aria-label="' + i.label + '">' + WX[i.icon] + '</svg>' +
+    '<div style="display:flex;flex-direction:column;gap:2px"><span class="num t">' + WEATHER.temp + '°</span>' +
+    '<span class="c">' + i.label + (today ? ' · H ' + today.hi + '° L ' + today.lo + '°' : '') + '</span></div>';
+}
+
+/* ---------- clock, next up, night ---------- */
+var wakeUntil = 0;
+function applyTheme(now) {
+  var dark = false;
+  if (SETTINGS.darkAtSunset) {
+    var today = WEATHER && WEATHER.days && WEATHER.days[parts(now).key];
+    if (today && today.sunrise && today.sunset) dark = now < today.sunrise || now >= today.sunset;
+    else if (WEATHER) dark = WEATHER.isDay === false;
+    else { var h = parts(now).h; dark = h >= 18 || h < 7; } // rough guess until the weather loads
+  }
+  document.body.classList.toggle('dark', dark);
+}
+function toMin(s) { var a = s.split(':'); return +a[0] * 60 + +a[1]; }
+function isNight(p) {
+  if (!SETTINGS.nightFrom || !SETTINGS.nightTo) return false;
+  var m = p.h * 60 + p.mi, from = toMin(SETTINGS.nightFrom), to = toMin(SETTINGS.nightTo);
+  return from > to ? (m >= from || m < to) : (m >= from && m < to);
+}
+function renderClock() {
+  var now = Date.now(), p = parts(now);
+  document.getElementById('time').textContent = pad(p.h) + ':' + pad(p.mi);
+  document.getElementById('wd').textContent = WD_LONG[p.wd];
+  document.getElementById('md').textContent = MONTHS[p.mo - 1] + ' ' + p.d;
+  applyTheme(now);
+  var night = document.getElementById('night');
+  var dim = isNight(p) && now > wakeUntil;
+  night.style.opacity = dim ? String(SETTINGS.nightOpacity) : '0';
+  night.style.pointerEvents = dim ? 'auto' : 'none';
+}
+/* ---------- tap an event for details ---------- */
+function indexData(d) {
+  (d.personal || []).forEach(function (e, i) { e._i = i; });
+  (d.sports || []).forEach(function (g, i) { g._i = i; });
+  return d;
+}
+var detailTimer = null;
+function longDate(ms) {
+  return new Intl.DateTimeFormat('en-US', { timeZone: TZ, weekday: 'long', month: 'long', day: 'numeric' }).format(new Date(ms));
+}
+function relWhen(start, end) {
+  var now = Date.now();
+  if (start <= now && end > now) return 'Happening now';
+  if (end <= now) return 'Already over';
+  var mins = Math.round((start - now) / 60000);
+  if (mins < 60) return 'In ' + mins + ' min';
+  var k = parts(start).key;
+  if (k === dayKeyOffset(0)) return 'Today';
+  if (k === dayKeyOffset(1)) return 'Tomorrow';
+  for (var n = 2; n <= 21; n++) if (k === dayKeyOffset(n)) return 'In ' + n + ' days';
+  return 'Coming up';
+}
+function row(k, v) { return v ? '<div class="drow"><span class="dk">' + k + '</span><span class="dv">' + v + '</span></div>' : ''; }
+function openDetail(id) {
+  if (!DATA || !id) return;
+  var kind = id.charAt(0), i = +id.slice(1), html;
+  if (kind === 'p') {
+    var e = DATA.personal[i]; if (!e) return;
+    var when = e.allDay ? longDate(e.start) + (parts(e.end - 1).key !== parts(e.start).key ? ' to ' + longDate(e.end - 1) : '') + ', all day'
+                        : longDate(e.start) + ', ' + hhmm(e.start) + ' to ' + hhmm(e.end);
+    html = '<div class="dhead" style="background:var(--accent);color:#fff">' +
+      '<div class="dtext"><span class="dkicker">' + esc(relWhen(e.start, e.end).toUpperCase()) + '</span><h3 id="dtitle">' + esc(e.title) + '</h3></div>' +
+      '<button class="dclose" aria-label="Close" data-close="1">&times;</button></div>' +
+      '<div class="dbody">' + row('WHEN', esc(when)) + row('WHERE', esc(e.place || e.location)) + row('CALENDAR', esc(e.cal)) +
+      (e.desc ? '<div class="drow"><span class="dk">NOTES</span><span class="dv ddesc">' + esc(e.desc) + '</span></div>' : '') + '</div>';
+  } else {
+    var g = DATA.sports[i]; if (!g) return;
+    var src = LOGOS[g.logo || g.code], light = isLight(g.bg);
+    var badgeStyle = src && lightLogo(src) ? 'background:transparent' : 'background:#fff';
+    var img = src ? '<img src="' + src + '" alt="' + esc(g.code) + '"' + (light && lightLogo(src) ? ' style="filter:brightness(0)"' : '') + '>' : '<b style="color:#1A1D22">' + esc(g.code) + '</b>';
+    var ha = g.ha === 'H' ? 'Home' : (g.ha === 'A' ? 'Away' : '');
+    html = '<div class="dhead" style="background:' + g.bg + ';color:' + g.fg + (light ? ';border-bottom:1px solid #D5DAE0' : '') + '">' +
+      '<span class="dbadge" style="' + badgeStyle + '">' + img + '</span>' +
+      '<div class="dtext"><span class="dkicker">' + esc((g.label || g.code).toUpperCase()) + ' · ' + esc(relWhen(g.start, g.end).toUpperCase()) + '</span><h3 id="dtitle">' + esc(g.title) + '</h3></div>' +
+      '<button class="dclose" aria-label="Close" data-close="1">&times;</button></div>' +
+      '<div class="dbody">' + row('WHEN', esc(longDate(g.start) + (g.allDay ? ', all day' : ', ' + hhmm(g.start)))) +
+      row('COMPETITION', esc(g.sub)) + row('HOME/AWAY', ha) + row('VENUE', esc(g.venue)) + '</div>';
+  }
+  html += '<div class="dfoot"><button class="dback" data-close="1">Back to calendar</button></div>';
+  document.getElementById('dcard').innerHTML = html;
+  document.getElementById('detail').className = 'on';
+  clearTimeout(detailTimer);
+  detailTimer = setTimeout(closeDetail, 60000); // closes on its own after a minute
+}
+function closeDetail() {
+  clearTimeout(detailTimer);
+  document.getElementById('detail').className = '';
+}
+document.addEventListener('click', function (ev) {
+  var t = ev.target;
+  var det = document.getElementById('detail');
+  if (det.className === 'on') {
+    // inside the card: only the close buttons close it; tapping the dim area outside also closes
+    if (t.closest('[data-close]') || !t.closest('.dcard')) closeDetail();
+    else { clearTimeout(detailTimer); detailTimer = setTimeout(closeDetail, 60000); }
+    return;
+  }
+  var hit = t.closest('[data-ev]');
+  if (hit) openDetail(hit.getAttribute('data-ev'));
+});
+
+/* ---------- screensaver: gray clock after a while without a touch ---------- */
+var lastActivity = Date.now();
+function saverWanted() {
+  if (!SETTINGS.screensaverFrom || !SETTINGS.screensaverTo) return false;
+  var p = parts(Date.now()), m = p.h * 60 + p.mi, from = toMin(SETTINGS.screensaverFrom), to = toMin(SETTINGS.screensaverTo);
+  var inWindow = from > to ? (m >= from || m < to) : (m >= from && m < to);
+  if (!inWindow) return false;
+  return Date.now() - lastActivity > SETTINGS.screensaverAfter * 1000;
+}
+function renderSaver() {
+  var s = document.getElementById('saver'), on = saverWanted();
+  if (on) {
+    var p = parts(Date.now());
+    var t = document.getElementById('stime');
+    t.textContent = pad(p.h) + ':' + pad(p.mi);
+    // drift the clock slightly every minute so nothing sits in one spot all night
+    var dx = ((p.mi * 37) % 41) - 20, dy = ((p.mi * 23) % 31) - 15;
+    t.style.transform = 'translate(' + dx + 'px,' + dy + 'px)';
+  }
+  if (on) closeDetail();
+  s.className = on ? 'on' : '';
+}
+function activity(e) {
+  var wasOn = document.getElementById('saver').className === 'on';
+  lastActivity = Date.now();
+  if (wasOn) { renderSaver(); if (e && e.cancelable) e.preventDefault(); }
+}
+['touchstart', 'mousedown', 'keydown'].forEach(function (ev) { document.addEventListener(ev, activity, { capture: true, passive: false }); });
+setInterval(renderSaver, 5000);
+
+document.getElementById('night').addEventListener('click', function () {
+  wakeUntil = Date.now() + SETTINGS.tapWakeSeconds * 1000;
+  renderClock();
+  setTimeout(renderClock, SETTINGS.tapWakeSeconds * 1000 + 500);
+});
+
+function renderNext() {
+  var el = document.getElementById('next');
+  if (!DATA) { el.innerHTML = ''; return; }
+  var now = Date.now();
+  var up = DATA.personal.filter(function (e) { return !e.allDay && e.end > now; });
+  if (!up.length) {
+    el.className = 'nextup none';
+    el.removeAttribute('data-ev');
+    el.innerHTML = '<span class="k">NEXT UP</span><span class="ti ell">Nothing else this week</span>';
+    return;
+  }
+  var e = up[0], k = parts(e.start).key, when;
+  var mins = Math.round((e.start - now) / 60000);
+  if (e.start <= now) when = 'Now · until ' + hhmm(e.end);
+  else if (mins < 60) when = 'In ' + mins + ' min · ' + hhmm(e.start);
+  else if (k === dayKeyOffset(0)) when = 'Today · ' + hhmm(e.start);
+  else if (k === dayKeyOffset(1)) when = 'Tomorrow · ' + hhmm(e.start);
+  else when = WD_LONG[parts(e.start).wd] + ' · ' + hhmm(e.start);
+  if (e.location) when += ' · ' + e.location;
+  el.className = 'nextup';
+  el.setAttribute('data-ev', 'p' + e._i);
+  el.innerHTML = '<span class="k">NEXT UP</span><span class="ti ell">' + esc(e.title) + '</span><span class="wh ell">' + esc(when) + '</span>';
+}
+
+/* ---------- the grid ---------- */
+function layoutLanes(evs) {
+  evs.sort(function (a, b) { return a.top - b.top || b.bottom - a.bottom; });
+  var clusters = [], cur = null, curEnd = -1;
+  evs.forEach(function (e) {
+    if (!cur || e.top >= curEnd) { cur = []; clusters.push(cur); curEnd = e.bottom; }
+    cur.push(e); curEnd = Math.max(curEnd, e.bottom);
+  });
+  clusters.forEach(function (c) {
+    var lanes = [];
+    c.forEach(function (e) {
+      for (var i = 0; i < lanes.length; i++) if (lanes[i] <= e.top) { e.lane = i; lanes[i] = e.bottom; return; }
+      e.lane = lanes.length; lanes.push(e.bottom);
+    });
+    c.forEach(function (e) { e.lanes = lanes.length; });
+  });
+}
+
+var CUR_H = 0, REFITTING = false;
+function renderWeek() {
+  var wins = windows(), now = Date.now(), todayKey = parts(now).key;
+  var H = CUR_H || SETTINGS.hourPx, gridH = SETTINGS.hours * H;
+  var heads = '<div></div>', alld = '<div></div>', grid = '', anyAllDay = false;
+
+  grid += '<div class="gutter" style="height:' + gridH + 'px">';
+  for (var h = 0; h <= SETTINGS.hours; h++) {
+    var cls = h === 0 ? 'first' : (h === SETTINGS.hours ? 'last' : '');
+    grid += '<span class="' + cls + '" style="top:' + (h * H) + 'px">' + pad((wins[0].day.h + h) % 24) + ':00</span>';
+  }
+  grid += '</div>';
+
+  wins.forEach(function (w, i) {
+    var d = w.day, isToday = d.key === todayKey;
+    var lbl = i === 0 ? 'TODAY' : (i === 1 ? 'TOMORROW' : WD_LONG[d.wd].toUpperCase());
+    var wd = WEATHER && WEATHER.days[d.key];
+    heads += '<div class="dayhead' + (isToday ? ' today' : '') + '"><span class="lbl">' + lbl + '</span><div class="row1"><span class="num d">' + d.wd + ' ' + d.d + '</span>' +
+      (wd ? '<span class="hl">' + wxIcon(wd.code, true, 30) + '<span>H ' + wd.hi + '° <span class="lo">L ' + wd.lo + '°</span></span></span>' : '') + '</div></div>';
+
+    var all = DATA ? DATA.personal : [];
+    var allDays = all.filter(function (e) { return e.allDay && parts(e.start).key <= d.key && parts(e.end - 1).key >= d.key; });
+    if (allDays.length) anyAllDay = true;
+    alld += '<div class="allday">' + allDays.map(function (e) { return '<div class="ev ell" data-ev="p' + e._i + '">' + esc(e.title) + '</div>'; }).join('') + '</div>';
+
+    var placed = [], earlier = [], later = [];
+    all.forEach(function (e) {
+      if (e.allDay) return;
+      var overlaps = e.start < w.end && e.end > w.start;
+      if (overlaps) {
+        var top = (Math.max(e.start, w.start) - w.start) / 3600000 * H;
+        var bottom = (Math.min(e.end, w.end) - w.start) / 3600000 * H;
+        placed.push({ e: e, top: top, bottom: bottom, cutTop: e.start < w.start, cutBottom: e.end > w.end });
+      } else if (parts(e.start).key === d.key) {
+        (e.end <= w.start ? earlier : later).push(e);
+      }
+    });
+    layoutLanes(placed);
+
+    var html = '<div class="col' + (isToday ? ' today' : '') + '" style="height:' + gridH + 'px">';
+    for (var k = 1; k < SETTINGS.hours; k++) html += '<div class="hline" style="top:' + (k * H) + 'px"></div>';
+    if (!placed.length) html += '<div class="free" style="top:' + (gridH / 2 - 12) + 'px">' + (isToday ? 'Free for now' : 'Free') + '</div>';
+
+    placed.forEach(function (p) {
+      var hgt = Math.max(p.bottom - p.top, 28), wPct = 100 / p.lanes;
+      var style = 'top:' + (p.top + 1) + 'px;height:' + (hgt - 2) + 'px;left:calc(' + (p.lane * wPct) + '% + 5px);width:calc(' + wPct + '% - 10px)';
+      if (p.cutBottom) style += ';border-bottom-left-radius:0;border-bottom-right-radius:0';
+      if (p.cutTop) style += ';border-top-left-radius:0;border-top-right-radius:0';
+      var past = p.e.end < now ? ' past' : '';
+      var range = hhmm(p.e.start) + ' to ' + hhmm(p.e.end);
+      if (hgt < 44) {
+        html += '<div class="block short' + past + '" data-ev="p' + p.e._i + '" style="' + style + '"><span class="m">' + hhmm(p.e.start) + '</span><span class="t ell">' + esc(p.e.title) + '</span></div>';
+      } else if (hgt < 90) {
+        html += '<div class="block mid' + past + '" data-ev="p' + p.e._i + '" style="' + style + '"><span class="m ell">' + range + (p.e.location && p.lanes === 1 ? ' · ' + esc(p.e.location) : '') + '</span><span class="t ell">' + esc(p.e.title) + '</span></div>';
+      } else {
+        html += '<div class="block' + past + '" data-ev="p' + p.e._i + '" style="' + style + '"><span class="m ell">' + range + '</span><span class="t">' + esc(p.e.title) + '</span>' +
+          (p.e.location && p.lanes === 1 && hgt >= 130 ? '<span class="m ell">' + esc(p.e.location) + '</span>' : '') +
+          (p.cutBottom && hgt >= 150 ? '<span class="cont">Continues past ' + hhmm(w.end) + '</span>' : '') + '</div>';
+      }
+    });
+
+    if (earlier.length) {
+      var allPast = earlier.every(function (e) { return e.end < now; });
+      html += '<div class="pin' + (allPast ? ' past' : '') + '" style="top:6px">Earlier: ' + earlier.map(function (e) { return '<span data-ev="p' + e._i + '">' + hhmm(e.start) + ' ' + esc(e.title) + '</span>'; }).join(', ') + '</div>';
+    }
+    if (later.length) html += '<div class="pin" style="bottom:6px">Later: ' + later.map(function (e) { return '<span data-ev="p' + e._i + '">' + hhmm(e.start) + ' ' + esc(e.title) + '</span>'; }).join(', ') + '</div>';
+    if (isToday && now >= w.start && now <= w.end) html += '<div class="nowline" style="top:' + ((now - w.start) / 3600000 * H) + 'px"></div>';
+    html += '</div>';
+    grid += html;
+  });
+
+  document.getElementById('heads').innerHTML = heads;
+  var ad = document.getElementById('alldays');
+  ad.innerHTML = alld;
+  ad.style.display = anyAllDay ? '' : 'none';
+  document.getElementById('grid').innerHTML = grid;
+
+  // fit the hours into whatever height is left (all-day events like birthdays take some of it)
+  var week = document.querySelector('.week'), cs = getComputedStyle(week);
+  var avail = week.clientHeight - parseFloat(cs.paddingTop) - parseFloat(cs.paddingBottom) -
+    document.getElementById('heads').offsetHeight - (anyAllDay ? ad.offsetHeight : 0) - 2;
+  var fitH = Math.floor(avail / SETTINGS.hours);
+  if (fitH > 20 && fitH !== H && !REFITTING) { CUR_H = fitH; REFITTING = true; renderWeek(); REFITTING = false; }
+}
+
+/* ---------- games panel ---------- */
+/* A logo drawn only in white (or near white) can't sit on a white circle, so it goes straight onto the team color. */
+var LIGHT_CACHE = {};
+function lightLogo(src) {
+  if (!src || src.indexOf('image/svg') === -1) return false;
+  if (src in LIGHT_CACHE) return LIGHT_CACHE[src];
+  var light = false;
+  try {
+    var svg = src.indexOf(';base64,') !== -1 ? atob(src.split(';base64,')[1]) : decodeURIComponent(src.split(',')[1]);
+    var colors = [], re = /(?:fill|stroke|stop-color)\s*[:=]\s*["']?\s*(#[0-9a-f]{3,8}|rgba?\([^)]*\)|[a-z]+)/gi, m;
+    while ((m = re.exec(svg))) { var c = m[1].toLowerCase(); if (c !== 'none' && c !== 'transparent' && c !== 'currentcolor') colors.push(c); }
+    light = colors.length > 0 && colors.every(function (c) {
+      if (c === 'white') return true;
+      var hx = c.match(/^#([0-9a-f]{3}|[0-9a-f]{6})/);
+      if (hx) { var v = hx[1].length === 3 ? hx[1].replace(/(.)/g, '$1$1') : hx[1]; return parseInt(v.substr(0, 2), 16) > 225 && parseInt(v.substr(2, 2), 16) > 225 && parseInt(v.substr(4, 2), 16) > 225; }
+      var rg = c.match(/rgba?\((\d+)\D+(\d+)\D+(\d+)/);
+      return !!rg && +rg[1] > 225 && +rg[2] > 225 && +rg[3] > 225;
+    });
+  } catch (e) { light = false; }
+  LIGHT_CACHE[src] = light;
+  return light;
+}
+function badgeHtml(g, mini) {
+  var cls = mini ? 'mini' : 'badge', src = LOGOS[g.logo || g.code];
+  if (!src) return '<span class="' + cls + '">' + (mini ? '<b>' + esc(g.code) + '</b>' : '<span class="code">' + esc(g.code) + '</span>') + '</span>';
+  if (lightLogo(src)) {
+    // white logo: no circle; on a light block (like Germany) turn it black so it shows
+    var tint = isLight(g.bg) ? ' style="filter:brightness(0)"' : '';
+    return '<span class="' + cls + ' bare"><img src="' + src + '" alt="' + esc(g.code) + '"' + tint + '></span>';
+  }
+  return '<span class="' + cls + '"><img src="' + src + '" alt="' + esc(g.code) + '"></span>';
+}
+function isLight(hex) {
+  var c = hex.replace('#', ''); var r = parseInt(c.substr(0, 2), 16), g = parseInt(c.substr(2, 2), 16), b = parseInt(c.substr(4, 2), 16);
+  return (r * 299 + g * 587 + b * 114) / 1000 > 230;
+}
+function renderSide() {
+  var el = document.getElementById('side');
+  if (!DATA) { el.innerHTML = ''; return; }
+  var now = Date.now(), todayKey = parts(now).key, groups = {}, order = [];
+  function add(key, html, s) { if (!groups[key]) { groups[key] = []; order.push(key); } groups[key].push({ html: html, s: s }); }
+  DATA.holidays.forEach(function (h) {
+    if (h.date < todayKey) return;
+    add(h.date, '<div class="hrow"><span class="tag">HOLIDAY</span><span class="n">' + esc(h.title) + '</span></div>', -1);
+  });
+  DATA.sports.forEach(function (g) {
+    if (g.start + SETTINGS.gameLengthHours * 3600000 < now) return; // finished games drop off
+    add(parts(g.start).key,
+      '<div class="game' + (isLight(g.bg) ? ' light' : '') + '" data-ev="g' + g._i + '" style="background:' + g.bg + ';color:' + g.fg + '">' +
+      badgeHtml(g, false) +
+      '<div class="txt"><span class="ti ell">' + esc(g.title) + '</span>' + (g.sub ? '<span class="sb ell">' + esc(g.sub) + '</span>' : '') + '</div>' +
+      (g.ha ? '<span class="ha">(' + g.ha + ')</span>' : '') + '<span class="num tm">' + (g.allDay ? 'All day' : hhmm(g.start)) + '</span></div>', g.start);
+  });
+  order.sort();
+  var html = '';
+  order.forEach(function (k) {
+    var p = k.split('-');
+    var wd = new Intl.DateTimeFormat('en-US', { timeZone: 'UTC', weekday: 'long' }).format(new Date(Date.UTC(+p[0], +p[1] - 1, +p[2], 12)));
+    var label = k === todayKey ? 'TODAY' : (k === dayKeyOffset(1) ? 'TOMORROW' : (wd + ', ' + MONTHS[+p[1] - 1].slice(0, 3) + ' ' + (+p[2])).toUpperCase());
+    groups[k].sort(function (a, b) { return a.s - b.s; });
+    html += '<div class="sday"><div class="h">' + label + '</div>' + groups[k].map(function (r) { return r.html; }).join('') + '</div>';
+  });
+  el.innerHTML = html || '<div class="empty">No games or holidays in the next two weeks</div>';
+  // hide whole days that don't fit, rather than cutting one off halfway
+  var box = el.parentNode.getBoundingClientRect(), kids = el.children;
+  for (var i = 0; i < kids.length; i++) {
+    if (kids[i].getBoundingClientRect().bottom > box.bottom - 8) { for (var j = i; j < kids.length; j++) kids[j].style.display = 'none'; break; }
+  }
+}
+
+/* ---------- ticker ---------- */
+function renderTicker() {
+  var el = document.getElementById('ticker');
+  if (!DATA) return;
+  var now = Date.now(), todayKey = parts(now).key;
+  var today = DATA.sports.filter(function (g) { return parts(g.start).key === todayKey; });
+  var html = '<span class="lbl">TODAY\'S GAMES</span>';
+  if (today.length) {
+    html += today.map(function (g) {
+      var done = g.start + SETTINGS.gameLengthHours * 3600000 < now;
+      return '<span class="chip' + (done ? ' done' : '') + '" data-ev="g' + g._i + '" style="background:' + g.bg + ';color:' + g.fg + (isLight(g.bg) ? ';border:1px solid #6B7380' : '') + '">' +
+        badgeHtml(g, true) + esc(g.title) + ' · ' + (g.allDay ? 'All day' : hhmm(g.start)) + '</span>';
+    }).join('');
+  } else {
+    html += '<span class="dim">No games today</span>';
+  }
+  var upcoming = DATA.sports.filter(function (g) { return parts(g.start).key > todayKey; }).slice(0, 3);
+  if (upcoming.length) {
+    html += '<span class="sep">|</span><span class="dim" style="margin-right:-12px">Next:</span>' + upcoming.map(function (g) {
+      var k = parts(g.start).key, when = k === dayKeyOffset(1) ? 'Tomorrow' : parts(g.start).wd;
+      return '<span class="dim" data-ev="g' + g._i + '"><b>' + when + '</b> ' + esc(g.label || g.code) + ' ' + esc(g.title) + ' ' + hhmm(g.start) + '</span>';
+    }).join('');
+  }
+  el.innerHTML = html;
+}
+
+/* ---------- loading ---------- */
+function setStatus(msg) { var s = document.getElementById('status'); s.textContent = msg || ''; s.style.display = msg ? 'block' : 'none'; }
+function renderAll() { renderClock(); renderWeather(); renderNext(); renderWeek(); renderSide(); renderTicker(); }
+function server() { return window.google && google.script && google.script.run; }
+
+function load() {
+  if (server()) {
+    google.script.run
+      .withSuccessHandler(function (json) { DATA = indexData(JSON.parse(json)); TZ = DATA.timeZone || TZ; setStatus(''); renderAll(); })
+      .withFailureHandler(function () { setStatus(DATA ? 'Offline, showing data from ' + hhmm(DATA.generated) : 'Could not load calendar, retrying...'); })
+      .getData();
+  } else if (window.MOCK_DATA) { DATA = indexData(window.MOCK_DATA); renderAll(); }
+}
+function loadWeather() {
+  if (server()) google.script.run.withSuccessHandler(function (json) { WEATHER = JSON.parse(json); renderAll(); }).getWeather();
+  else if (window.MOCK_WEATHER) { WEATHER = window.MOCK_WEATHER; renderAll(); }
+}
+function loadLogos() {
+  if (server()) google.script.run
+    .withSuccessHandler(function (json) {
+      LOGOS = JSON.parse(json); renderSide(); renderTicker();
+      if (!Object.keys(LOGOS).length) setTimeout(loadLogos, 5 * 60000); // none yet: try again soon
+    })
+    .withFailureHandler(function (err) {
+      setStatus('Logos: ' + (err && err.message ? err.message : err));
+      setTimeout(loadLogos, 60000);
+    })
+    .getLogos();
+  else if (window.MOCK_LOGOS) { LOGOS = window.MOCK_LOGOS; }
+}
+
+function fit() {
+  var s = Math.min(window.innerWidth / 1920, window.innerHeight / 1080);
+  var st = document.getElementById('stage');
+  st.style.transform = 'scale(' + s + ')';
+  st.style.left = ((window.innerWidth - 1920 * s) / 2) + 'px';
+  st.style.top = ((window.innerHeight - 1080 * s) / 2) + 'px';
+}
+
+window.addEventListener('resize', fit);
+fit();
+loadLogos();
+renderAll();
+load();
+loadWeather();
+setInterval(function () { renderClock(); renderNext(); }, 15000);
+setInterval(function () { if (DATA) { renderWeek(); renderSide(); renderTicker(); } }, 60000);
+setInterval(load, SETTINGS.refreshMinutes * 60000);
+setInterval(loadWeather, 15 * 60000);
+setInterval(loadLogos, 6 * 3600000);
+</script>
+</body>
+</html>

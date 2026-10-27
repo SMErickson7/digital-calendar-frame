@@ -1,0 +1,10 @@
+#!/data/data/com.termux/files/usr/bin/sh
+# Termux:Boot runs this at every startup:
+#  1. opens Fully (a backup in case Fully's own "Launch on Boot" doesn't fire)
+#  2. starts the Counter Calendar backlight script as root
+sleep 20
+for SU in /system/xbin/su /system/bin/su /sbin/su; do
+  if [ -x "$SU" ]; then
+    exec "$SU" -c 'am start -n de.ozerov.fully/.FullyActivity >/dev/null 2>&1; nohup /data/local/tmp/calendar-dimmer.sh >/dev/null 2>&1 &'
+  fi
+done
